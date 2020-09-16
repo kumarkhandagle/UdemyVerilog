@@ -1,0 +1,166 @@
+
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+use ieee.std_logic_unsigned.all;
+
+
+entity top is
+    Port ( clk : in STD_LOGIC;
+    vga_r : out std_logic_vector(4 downto 0);
+    vga_g : out std_logic_vector(5 downto 0);
+    vga_b : out std_logic_vector(4 downto 0);
+    vga_hs : out std_logic;
+    vga_vs : out std_logic    
+    );
+end top;
+
+architecture Behavioral of top is
+signal count : integer range 0 to 961 := 0;
+signal countv : integer range 0 to 416801 := 0;
+signal state,statev : std_logic_Vector(2 downto 0) := "000";
+signal th,hflag,tv,vflag : std_logic := '0';
+begin
+hysnc_process:process(clk)
+begin
+case(state) is
+when "000" =>
+if(count < 16) then
+count <= count + 1;
+th <= '1';
+else
+count <= 0;
+th <= '0';
+state <= "001";
+end if;
+
+when "001" =>
+if(count < 96) then
+count <= count + 1;
+th <= '0';
+else
+count <= 0;
+th <= '0';
+state <= "010";
+end if;
+
+
+when "010" =>
+if(count < 704) then
+count <= count + 1;
+th <= '1';
+hflag <= '1';
+else
+hflag <= '0';
+count <= 0;
+th <= '0';
+state <= "011";
+end if;
+
+when "011" =>
+if(count < 96) then
+count <= count + 1;
+th <= '0';
+else
+count <= 0;
+th <= '1';
+state <= "100";
+end if;
+
+when "100" =>
+if(count < 48) then
+count <= count + 1;
+th <= '1';
+else
+count <= 0;
+th <= '1';
+state <= "000";
+end if;
+
+
+when others =>
+ state <= "000";
+
+end case;
+end process;
+
+-------------------------------------------------
+vsync_process:process(clk)
+begin
+case(statev) is
+when "000" =>
+ if(countv < 800) then
+   countv <= countv + 1;
+   tv <= '1';
+  else
+     countv <= 0;
+     tv <= '0';
+     statev <= "001";
+ end if;
+ 
+ when "001" =>
+  if(countv < 1600) then
+    countv <= countv + 1;
+    tv <= '0';
+   else
+      countv <= 0;
+      tv <= '1';
+      statev <= "010";
+  end if;
+   
+ when "010" =>
+   if(countv < 415200) then
+     countv <= countv + 1;
+     tv <= '1';
+     vflag <= '1';
+    else
+       countv <= 0;
+       tv <= '0';
+       vflag <= '0';
+       statev <= "011";
+   end if;  
+
+
+ when "011" =>
+   if(countv < 1600) then
+     countv <= countv + 1;
+     tv <= '0';
+    else
+       countv <= 0;
+       tv <= '1';
+       statev <= "100";
+   end if;  
+
+
+ when "100" =>
+   if(countv < 23200) then
+     countv <= countv + 1;
+     tv <= '1';
+    else
+       countv <= 0;
+       tv <= '0';
+       statev <= "000";
+   end if;  
+   
+ when others =>
+    statev <= "000";
+      
+end case;   
+end process;
+---------------------------------------
+
+process(clk)
+begin
+if(hflag = '1' and vflag = '1' ) then
+vga_r <= "11111";
+vga_g <= "111111";
+vga_b <= "11111";
+end if;
+end process;
+
+
+vga_hs <= th;
+vga_vs <= tv;
+
+end Behavioral;
